@@ -8,13 +8,13 @@ This tool provides a **portable, DE-agnostic screenshot system** that automatica
 
 ### Key Features
 
-- **🔧 Update-Resilient Architecture**: Automatically detects tool capabilities and adapts to version changes
-- **🔄 Automatic Migration System**: Handles configuration updates when tools are upgraded
-- **🧪 Comprehensive Testing**: Built-in compatibility testing after updates
-- **🎯 Multiple Capture Modes**: Area, frozen, monitor, screen, and OCR text extraction
-- **✨ Modern Annotation**: Supports both Satty and Swappy annotation tools
-- **📋 Smart Clipboard Integration**: Seamless Wayland clipboard operations
-- **📊 Detailed Reporting**: Comprehensive compatibility and status reports
+- ** Update-Resilient Architecture**: Automatically detects tool capabilities and adapts to version changes
+- ** Automatic Migration System**: Handles configuration updates when tools are upgraded
+- ** Comprehensive Testing**: Built-in compatibility testing after updates
+- ** Multiple Capture Modes**: Area, frozen, monitor, screen, and OCR text extraction
+- ** Modern Annotation**: Supports both Satty and Swappy annotation tools
+- ** Smart Clipboard Integration**: Seamless Wayland clipboard operations
+- ** Detailed Reporting**: Comprehensive compatibility and status reports
 
 ## Installation
 
