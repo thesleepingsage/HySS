@@ -1,0 +1,365 @@
+#!/usr/bin/env bash
+#
+# Screenshot Tool Update Manager
+# Handles structured updates and system maintenance
+#
+
+set -euo pipefail
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/screenshot-tool"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/screenshot-tool"
+
+# Ensure directories exist
+mkdir -p "$CONFIG_DIR" "$DATA_DIR"
+
+# Source modules
+source "$SCRIPT_DIR/lib/tool-detection.sh"
+source "$SCRIPT_DIR/lib/migration-system.sh"
+source "$SCRIPT_DIR/lib/compatibility-testing.sh"
+
+usage() {
+    cat << 'EOF'
+Screenshot Tool Update Manager
+
+Usage: screenshot-tool-update [command] [options]
+
+Commands:
+  check         Check for tool updates and compatibility issues
+  migrate       Run configuration migrations for updated tools
+  test          Run comprehensive compatibility tests
+  report        Generate detailed compatibility report
+  clean         Clean old data and temporary files
+  status        Show current tool status and capabilities
+  force-regen   Force regenerate all configurations
+  history       Show migration and test history
+
+Options:
+  --verbose     Enable verbose output
+  --force       Force operations without confirmation
+  --quiet       Suppress non-essential output
+
+Examples:
+  screenshot-tool-update check           # Check for updates
+  screenshot-tool-update test            # Run compatibility tests
+  screenshot-tool-update report         # Generate report
+  screenshot-tool-update clean          # Clean old data
+EOF
+}
+
+# Initialize systems
+init_update_system() {
+    init_tool_capabilities
+    init_migration_system
+    init_testing_system
+}
+
+# Check for updates and compatibility
+check_updates() {
+    local verbose="${1:-false}"
+    
+    echo "🔍 Checking screenshot tool system status..."
+    
+    if [[ "$verbose" == "true" ]]; then
+        echo "Initializing tool capabilities detection..."
+    fi
+    
+    # Initialize and detect current tool state
+    init_update_system
+    
+    if [[ "$verbose" == "true" ]]; then
+        print_capability_report
+        echo ""
+    fi
+    
+    # Check for version changes
+    if check_for_version_changes; then
+        echo "✓ System is up to date and compatible"
+        return 0
+    else
+        echo "⚠️ Compatibility issues detected"
+        return 1
+    fi
+}
+
+# Run comprehensive update workflow
+run_update_workflow() {
+    local force="${1:-false}"
+    
+    echo "🔄 Running structured update workflow..."
+    
+    # Step 1: Initialize systems
+    echo "Step 1: Initializing systems..."
+    init_update_system
+    
+    # Step 2: Check tool compatibility
+    echo "Step 2: Checking tool compatibility..."
+    if ! check_required_tools; then
+        echo "❌ Critical tools are missing. Please install required dependencies."
+        return 1
+    fi
+    
+    # Step 3: Check for version changes and run migrations
+    echo "Step 3: Checking for updates and running migrations..."
+    if ! check_for_version_changes; then
+        echo "⚠️ Some migrations failed, but continuing with tests..."
+    fi
+    
+    # Step 4: Run compatibility tests
+    echo "Step 4: Running compatibility tests..."
+    if run_compatibility_tests; then
+        echo "✅ Update workflow completed successfully"
+        return 0
+    else
+        echo "❌ Compatibility tests failed"
+        return 1
+    fi
+}
+
+# Generate comprehensive status report
+generate_status_report() {
+    local output_file="$1"
+    
+    echo "📊 Generating comprehensive status report..."
+    
+    # Initialize systems to get current state
+    init_update_system
+    
+    if [[ -n "$output_file" ]]; then
+        generate_compatibility_report "$output_file"
+        echo "✓ Report saved to: $output_file"
+    else
+        # Print to stdout
+        echo ""
+        print_capability_report
+        echo ""
+        show_migration_history
+        echo ""
+        show_test_history
+    fi
+}
+
+# Clean system data
+clean_system_data() {
+    local force="${1:-false}"
+    
+    if [[ "$force" != "true" ]]; then
+        echo "This will clean old migration data, test results, and backup configurations."
+        read -r -p "Continue? [y/N] " response
+        case "$response" in
+            [yY][eE][sS]|[yY])
+                ;;
+            *)
+                echo "Cancelled"
+                return 0
+                ;;
+        esac
+    fi
+    
+    echo "🧹 Cleaning system data..."
+    
+    # Clean migration data
+    clean_migration_data
+    
+    # Clean test history
+    clean_test_history
+    
+    # Clean temporary files
+    find "$DATA_DIR" -name "*.tmp" -delete 2>/dev/null || true
+    find "$CONFIG_DIR" -name "*.backup.*" -mtime +7 -delete 2>/dev/null || true
+    
+    echo "✓ System data cleaned"
+}
+
+# Force regenerate configurations
+force_regenerate() {
+    local force="${1:-false}"
+    
+    if [[ "$force" != "true" ]]; then
+        echo "This will regenerate all tool configurations, backing up existing ones."
+        read -r -p "Continue? [y/N] " response
+        case "$response" in
+            [yY][eE][sS]|[yY])
+                ;;
+            *)
+                echo "Cancelled"
+                return 0
+                ;;
+        esac
+    fi
+    
+    echo "🔄 Force regenerating configurations..."
+    
+    # Initialize to get current tool capabilities
+    init_update_system
+    
+    # Force regenerate configs
+    force_regenerate_configs
+    
+    echo "✓ Configurations regenerated"
+}
+
+# Show system history
+show_system_history() {
+    echo "📚 System History"
+    echo "=================="
+    
+    # Initialize to load history data
+    init_migration_system
+    init_testing_system
+    
+    show_migration_history
+    echo ""
+    show_test_history
+}
+
+# Interactive mode
+interactive_mode() {
+    echo "🛠️ Screenshot Tool Update Manager - Interactive Mode"
+    echo "======================================================"
+    
+    while true; do
+        echo ""
+        echo "Available actions:"
+        echo "  1) Check system status"
+        echo "  2) Run compatibility tests"
+        echo "  3) Check for updates and migrate"
+        echo "  4) Generate status report"
+        echo "  5) Show system history"
+        echo "  6) Clean old data"
+        echo "  7) Force regenerate configs"
+        echo "  8) Exit"
+        echo ""
+        
+        read -r -p "Select action [1-8]: " choice
+        
+        case "$choice" in
+            1)
+                echo ""
+                generate_status_report ""
+                ;;
+            2)
+                echo ""
+                init_update_system
+                run_compatibility_tests
+                ;;
+            3)
+                echo ""
+                check_updates true
+                ;;
+            4)
+                echo ""
+                read -r -p "Output file (press Enter for default): " output_file
+                generate_status_report "$output_file"
+                ;;
+            5)
+                echo ""
+                show_system_history
+                ;;
+            6)
+                echo ""
+                clean_system_data false
+                ;;
+            7)
+                echo ""
+                force_regenerate false
+                ;;
+            8)
+                echo "Goodbye!"
+                break
+                ;;
+            *)
+                echo "Invalid choice. Please select 1-8."
+                ;;
+        esac
+        
+        echo ""
+        read -r -p "Press Enter to continue..."
+    done
+}
+
+# Main execution
+main() {
+    local command="${1:-}"
+    local verbose=false
+    local force=false
+    local quiet=false
+    
+    # Parse options
+    shift || true
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --verbose)
+                verbose=true
+                shift
+                ;;
+            --force)
+                force=true
+                shift
+                ;;
+            --quiet)
+                quiet=true
+                shift
+                ;;
+            *)
+                echo "Unknown option: $1" >&2
+                usage
+                exit 1
+                ;;
+        esac
+    done
+    
+    # Set quiet mode
+    if [[ "$quiet" == "true" ]]; then
+        exec 1>/dev/null
+    fi
+    
+    case "$command" in
+        check)
+            check_updates "$verbose"
+            ;;
+        migrate)
+            echo "🔄 Running migrations..."
+            init_update_system
+            check_for_version_changes
+            ;;
+        test)
+            echo "🧪 Running compatibility tests..."
+            init_update_system
+            run_compatibility_tests
+            ;;
+        report)
+            generate_status_report ""
+            ;;
+        clean)
+            clean_system_data "$force"
+            ;;
+        status)
+            generate_status_report ""
+            ;;
+        force-regen)
+            force_regenerate "$force"
+            ;;
+        history)
+            show_system_history
+            ;;
+        update)
+            run_update_workflow "$force"
+            ;;
+        interactive)
+            interactive_mode
+            ;;
+        ""|help|--help)
+            usage
+            ;;
+        *)
+            echo "Unknown command: $command" >&2
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"

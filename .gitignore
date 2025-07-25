@@ -1,0 +1,39 @@
+# HySS Screenshot Tool - Git Ignore
+
+# User data directories (these should not be in version control)
+.config/
+.local/
+.cache/
+
+# Runtime files
+*.tmp
+*.lock
+*_test_*.png
+*_backup_*
+
+# Generated configuration backups
+*.backup.*
+
+# Test output files
+compatibility-test-results.json
+migration-metadata.json
+tool-capabilities.json
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temporary screenshot files
+screenshot_*.png
+ocr_*.png
+*_XXXXXX.png

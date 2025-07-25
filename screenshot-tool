@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+#
+# Screenshot Tool - Update-Resilient Screenshot Utility
+# Based on HyDE's implementation with abstraction layer for maintainability
+#
+# Usage: screenshot-tool [mode] [output_dir]
+# Modes: area|freeze|monitor|screen|ocr
+
+set -euo pipefail
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/screenshot-tool"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/screenshot-tool"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/screenshot-tool"
+PICTURES_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}"
+
+# Ensure directories exist
+mkdir -p "$CONFIG_DIR" "$DATA_DIR" "$CACHE_DIR" "$PICTURES_DIR/Screenshots"
+
+# Source abstraction modules
+source "$SCRIPT_DIR/lib/tool-detection.sh"
+source "$SCRIPT_DIR/lib/capture-abstraction.sh"
+source "$SCRIPT_DIR/lib/annotation-abstraction.sh"
+source "$SCRIPT_DIR/lib/clipboard-abstraction.sh"
+
+# Lock file management
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/screenshot-tool.lock"
+cleanup() {
+    [[ -f "$LOCK_FILE" ]] && rm -f "$LOCK_FILE"
+    [[ -f "$TEMP_SCREENSHOT" ]] && rm -f "$TEMP_SCREENSHOT"
+}
+trap cleanup EXIT
+
+acquire_lock() {
+    if [[ -e "$LOCK_FILE" ]]; then
+        echo "Another screenshot operation is in progress" >&2
+        exit 2
+    fi
+    touch "$LOCK_FILE"
+}
+
+# Initialize temporary file
+TEMP_SCREENSHOT=$(mktemp -t screenshot_XXXXXX.png)
+chmod 600 "$TEMP_SCREENSHOT"
+
+# Configuration
+SAVE_DIR="${2:-$PICTURES_DIR/Screenshots}"
+SAVE_FILE="$(date +'%y%m%d_%Hh%Mm%Ss_screenshot.png')"
+SAVE_PATH="$SAVE_DIR/$SAVE_FILE"
+
+mkdir -p "$SAVE_DIR"
+
+usage() {
+    cat << 'EOF'
+Screenshot Tool - Update-Resilient Screenshot Utility
+
+Usage: screenshot-tool [mode] [output_dir]
+
+Modes:
+  area, s      Interactive area/window selection
+  freeze, sf   Frozen screen area selection
+  monitor, m   Current monitor capture
+  screen, p    All monitors capture
+  ocr, sc      OCR text extraction to clipboard
+
+Options:
+  output_dir   Custom save directory (default: ~/Pictures/Screenshots)
+
+Environment Variables:
+  SCREENSHOT_ANNOTATION_TOOL  Force specific tool (satty|swappy)
+  SCREENSHOT_NO_ANNOTATION    Skip annotation step
+  SCREENSHOT_COPY_ONLY        Only copy to clipboard, don't save file
+
+Examples:
+  screenshot-tool area                    # Interactive selection
+  screenshot-tool freeze ~/Desktop       # Frozen selection to Desktop
+  screenshot-tool ocr                     # OCR text extraction
+EOF
+}
+
+# Main screenshot workflow
+take_screenshot() {
+    local mode="$1"
+    
+    # Initialize tool capabilities
+    init_tool_capabilities
+    
+    case "$mode" in
+        area|s)
+            echo "📸 Select area or window..."
+            capture_area "$TEMP_SCREENSHOT" || return 1
+            ;;
+        freeze|sf)
+            echo "📸 Frozen screen selection..."
+            capture_area_frozen "$TEMP_SCREENSHOT" || return 1
+            ;;
+        monitor|m)
+            echo "📸 Capturing current monitor..."
+            capture_monitor "$TEMP_SCREENSHOT" || return 1
+            ;;
+        screen|p)
+            echo "📸 Capturing all monitors..."
+            capture_screen "$TEMP_SCREENSHOT" || return 1
+            ;;
+        ocr|sc)
+            echo "📝 OCR text extraction..."
+            extract_text_ocr || return 1
+            return 0  # OCR workflow ends here
+            ;;
+        *)
+            echo "Error: Unknown mode '$mode'" >&2
+            usage
+            return 1
+            ;;
+    esac
+    
+    # Post-capture workflow
+    if [[ -n "${SCREENSHOT_COPY_ONLY:-}" ]]; then
+        # Copy to clipboard only
+        copy_to_clipboard "$TEMP_SCREENSHOT"
+        notify_user "Screenshot copied to clipboard"
+    elif [[ -n "${SCREENSHOT_NO_ANNOTATION:-}" ]]; then
+        # Save without annotation
+        cp "$TEMP_SCREENSHOT" "$SAVE_PATH"
+        copy_to_clipboard "$TEMP_SCREENSHOT"
+        notify_user "Screenshot saved to $SAVE_PATH"
+    else
+        # Full workflow: save + annotate
+        cp "$TEMP_SCREENSHOT" "$SAVE_PATH"
+        copy_to_clipboard "$TEMP_SCREENSHOT"
+        
+        # Launch annotation tool
+        if ! annotate_screenshot "$SAVE_PATH"; then
+            # Annotation failed, but we still have the basic screenshot
+            notify_user "Screenshot saved (annotation failed)" "$SAVE_PATH"
+        fi
+    fi
+}
+
+# User notification
+notify_user() {
+    local message="$1"
+    local image_path="${2:-}"
+    
+    if command -v notify-send >/dev/null 2>&1; then
+        if [[ -n "$image_path" && -f "$image_path" ]]; then
+            notify-send -a "Screenshot Tool" "$message" -i "$image_path"
+        else
+            notify-send -a "Screenshot Tool" "$message"
+        fi
+    else
+        echo "$message"
+    fi
+}
+
+# Main execution
+main() {
+    local mode="${1:-}"
+    
+    if [[ -z "$mode" ]] || [[ "$mode" == "help" ]] || [[ "$mode" == "--help" ]]; then
+        usage
+        exit 0
+    fi
+    
+    # Acquire lock to prevent concurrent operations
+    acquire_lock
+    
+    # Check dependencies
+    if ! check_required_tools; then
+        echo "Error: Missing required dependencies" >&2
+        exit 3
+    fi
+    
+    # Execute screenshot workflow
+    if take_screenshot "$mode"; then
+        exit 0
+    else
+        echo "Error: Screenshot operation failed" >&2
+        exit 1
+    fi
+}
+
+# Run main function with all arguments
+main "$@"
