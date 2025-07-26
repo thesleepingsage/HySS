@@ -139,7 +139,7 @@ bindd = Super+Shift, S, Screen snip, exec, hyprshot --freeze --clipboard-only --
 # 89 characters with temporary files and cleanup
 bindd = Super+Shift, T, Character recognition, exec, grim -g "$(slurp $SLURP_ARGS)" "tmp.png" && tesseract "tmp.png" - | wl-copy && rm "tmp.png"
 
-# Multiple tools for simple fullscreen screenshot  
+# Multiple tools for simple fullscreen screenshot
 bindld = ,Print, Screenshot >> clipboard, exec, grim - | wl-copy
 ```
 
@@ -147,7 +147,7 @@ bindld = ,Print, Screenshot >> clipboard, exec, grim - | wl-copy
 ```bash
 # Simple, memorable commands - just 13-18 characters each
 bindd = Super+Shift, S, Screen snip, exec, hyss freeze
-bindd = Super+Shift, T, Character recognition, exec, hyss ocr  
+bindd = Super+Shift, T, Character recognition, exec, hyss ocr
 bindld = ,Print, Screenshot >> clipboard, exec, hyss screen
 ```
 
@@ -158,8 +158,8 @@ Drop these into your `hyprland.conf` or keybinds configuration:
 ```bash
 # Screenshot operations
 bindd = Super+Shift, S, Screen snip, exec, hyss freeze           # Frozen screen region selection
-bindd = Super+Alt, S, Area selection, exec, hyss area            # Interactive area selection  
-bindld = ,Print, Screenshot >> clipboard, exec, hyss screen     # Fullscreen to clipboard
+bindd = Super+Alt, S, Area selection, exec, hyss area            # Interactive area selection
+bindld = ,Print, Screenshot >> clipboard, exec, hyss screen      # Fullscreen to clipboard
 bindd = Super, Print, Monitor screenshot, exec, hyss monitor     # Current monitor only
 
 # Advanced features
@@ -170,7 +170,7 @@ bindd = Super+Shift, C, Color picker, exec, hyprpicker -a        # Color picker 
 #### Benefits for Dotfile Sharing
 
 - **Cleaner configs**: Easy to read and understand at a glance
-- **Reduced complexity**: No need to memorize tool-specific parameters  
+- **Reduced complexity**: No need to memorize tool-specific parameters
 - **Better maintenance**: HySS automatically handles tool updates and compatibility
 - **Consistent behavior**: Same commands work regardless of underlying tool versions
 - **Simplified sharing**: Others can easily understand and modify your keybinds
