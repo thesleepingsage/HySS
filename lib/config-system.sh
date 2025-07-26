@@ -15,6 +15,13 @@ HYSS_FILENAME_FORMAT="${HYSS_FILENAME_FORMAT:-%y%m%d_%Hh%Mm%Ss_hyss.png}"
 HYSS_COPY_TO_CLIPBOARD="${HYSS_COPY_TO_CLIPBOARD:-true}"
 HYSS_ANNOTATION_TOOL="${HYSS_ANNOTATION_TOOL:-auto}"
 
+# Satty window sizing defaults
+HYSS_SATTY_AUTO_SIZE="${HYSS_SATTY_AUTO_SIZE:-true}"
+HYSS_SATTY_MIN_WIDTH="${HYSS_SATTY_MIN_WIDTH:-800}"
+HYSS_SATTY_MIN_HEIGHT="${HYSS_SATTY_MIN_HEIGHT:-600}"
+HYSS_SATTY_TOOLBAR_HEIGHT="${HYSS_SATTY_TOOLBAR_HEIGHT:-150}"
+HYSS_SATTY_PADDING="${HYSS_SATTY_PADDING:-50}"
+
 # Configuration file path
 HYSS_CONFIG_FILE="$CONFIG_DIR/config.toml"
 
@@ -55,6 +62,14 @@ copy_to_clipboard = true                         # automatically copy to clipboa
 [tools]
 # Tool preferences (auto-detected if not specified)
 annotation_tool = "auto"                         # auto, satty, swappy, none
+
+[satty]
+# Satty annotation tool window sizing
+auto_size = true            # enable automatic window sizing based on image dimensions
+min_width = 800            # minimum window width in pixels
+min_height = 600           # minimum window height in pixels
+toolbar_height = 150       # space reserved for satty toolbars
+padding = 50               # extra padding around image
 EOF
 
     echo "✓ Created default configuration at $HYSS_CONFIG_FILE"
@@ -84,13 +99,16 @@ parse_toml_value() {
         in_section && /^[[:space:]]*[^#]/ {
             if (match($0, "^[[:space:]]*" key "[[:space:]]*=[[:space:]]*(.*)$", arr)) {
                 value = arr[1]
+                # Remove trailing comments first
+                gsub(/[[:space:]]*#.*$/, "", value)
+                # Remove surrounding whitespace
+                gsub(/^[[:space:]]+/, "", value)
+                gsub(/[[:space:]]+$/, "", value)
                 # Remove quotes if present
                 gsub(/^"/, "", value)
                 gsub(/"$/, "", value)
                 gsub(/^'"'"'/, "", value)
                 gsub(/'"'"'$/, "", value)
-                # Remove trailing comments
-                gsub(/[[:space:]]*#.*$/, "", value)
                 print value
                 exit
             }
@@ -125,11 +143,20 @@ load_hyss_config() {
     # Load tool settings
     HYSS_ANNOTATION_TOOL=$(parse_toml_value "$HYSS_CONFIG_FILE" "tools" "annotation_tool" "$HYSS_ANNOTATION_TOOL")
 
+    # Load satty window sizing settings
+    HYSS_SATTY_AUTO_SIZE=$(parse_toml_value "$HYSS_CONFIG_FILE" "satty" "auto_size" "$HYSS_SATTY_AUTO_SIZE")
+    HYSS_SATTY_MIN_WIDTH=$(parse_toml_value "$HYSS_CONFIG_FILE" "satty" "min_width" "$HYSS_SATTY_MIN_WIDTH")
+    HYSS_SATTY_MIN_HEIGHT=$(parse_toml_value "$HYSS_CONFIG_FILE" "satty" "min_height" "$HYSS_SATTY_MIN_HEIGHT")
+    HYSS_SATTY_TOOLBAR_HEIGHT=$(parse_toml_value "$HYSS_CONFIG_FILE" "satty" "toolbar_height" "$HYSS_SATTY_TOOLBAR_HEIGHT")
+    HYSS_SATTY_PADDING=$(parse_toml_value "$HYSS_CONFIG_FILE" "satty" "padding" "$HYSS_SATTY_PADDING")
+
     # Export for use in other scripts
     export HYSS_NOTIFICATIONS HYSS_NOTIFICATION_APP_NAME HYSS_NOTIFICATION_URGENCY
     export HYSS_NOTIFICATION_TIMEOUT HYSS_NOTIFICATION_SHOW_PREVIEW
     export HYSS_DEFAULT_DIRECTORY HYSS_FILENAME_FORMAT HYSS_COPY_TO_CLIPBOARD
     export HYSS_ANNOTATION_TOOL
+    export HYSS_SATTY_AUTO_SIZE HYSS_SATTY_MIN_WIDTH HYSS_SATTY_MIN_HEIGHT
+    export HYSS_SATTY_TOOLBAR_HEIGHT HYSS_SATTY_PADDING
 }
 
 # Enhanced notification function with configuration support

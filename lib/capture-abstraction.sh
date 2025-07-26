@@ -235,7 +235,7 @@ extract_text_ocr() {
     
     # Cleanup function
     cleanup_ocr() {
-        [[ -f "$ocr_temp" ]] && rm -f "$ocr_temp"
+        [[ -n "${ocr_temp:-}" ]] && [[ -f "$ocr_temp" ]] && rm -f "$ocr_temp"
     }
     trap cleanup_ocr RETURN
     
