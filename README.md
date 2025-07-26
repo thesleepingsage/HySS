@@ -1,4 +1,4 @@
-# HyprScreenShot (HyprShot)
+# HyprScreenShot
 
 A standalone, update-resilient screenshot utility based on HyDE's implementation with advanced maintainability features.
 
