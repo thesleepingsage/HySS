@@ -278,17 +278,11 @@ extract_text_ocr() {
         echo "$extracted_text" | copy_text_to_clipboard
         
         # Show notification with preview
-        if [[ "${TOOL_CAPABILITIES[notify_send_available]:-false}" == "true" ]]; then
-            local preview
-            preview=$(echo "$extracted_text" | head -c 100)
-            [[ ${#extracted_text} -gt 100 ]] && preview="$preview..."
-            
-            if [[ "${TOOL_CAPABILITIES[notify_images]:-false}" == "true" ]]; then
-                notify-send -a "Screenshot Tool" "OCR Text Extracted" "$preview" -i "$ocr_temp"
-            else
-                notify-send -a "Screenshot Tool" "OCR Text Extracted" "$preview"
-            fi
-        fi
+        local preview
+        preview=$(echo "$extracted_text" | head -c 100)
+        [[ ${#extracted_text} -gt 100 ]] && preview="$preview..."
+        
+        notify_hyss "OCR Text Extracted: $preview" "$ocr_temp"
         
         echo "Text extracted and copied to clipboard:"
         echo "$extracted_text"

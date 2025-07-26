@@ -195,6 +195,7 @@ detect_notification_capabilities() {
         # Test notification features
         TOOL_CAPABILITIES[notify_images]=$(notify-send --help 2>/dev/null | grep -q -- "-i\|--icon" && echo true || echo false)
         TOOL_CAPABILITIES[notify_urgency]=$(notify-send --help 2>/dev/null | grep -q -- "-u\|--urgency" && echo true || echo false)
+        TOOL_CAPABILITIES[notify_timeout]=$(notify-send --help 2>/dev/null | grep -q -- "-t\|--timeout" && echo true || echo false)
     fi
 }
 

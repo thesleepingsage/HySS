@@ -1,10 +1,10 @@
-# Update-Resilient Screenshot Tool
+# HyprScreenShot (HyprShot)
 
 A standalone, update-resilient screenshot utility based on HyDE's implementation with advanced maintainability features.
 
 ## Overview
 
-This tool provides a **portable, DE-agnostic screenshot system** that automatically adapts to tool updates and maintains compatibility across different versions of its dependencies.
+HyprScreenShot provides a **portable, DE-agnostic screenshot system** that automatically adapts to tool updates and maintains compatibility across different versions of its dependencies.
 
 ### Key Features
 
@@ -15,6 +15,8 @@ This tool provides a **portable, DE-agnostic screenshot system** that automatica
 - **Modern Annotation**: Supports both Satty and Swappy annotation tools
 - **Smart Clipboard Integration**: Seamless Wayland clipboard operations
 - **Detailed Reporting**: Comprehensive compatibility and status reports
+- **Configurable Notifications**: TOML-based configuration with user-friendly management
+- **Subcommand Architecture**: Unified interface for screenshots, updates, and configuration
 
 ## Installation
 
@@ -39,18 +41,18 @@ This tool provides a **portable, DE-agnostic screenshot system** that automatica
 
 1. **Clone or copy the tool files:**
    ```bash
-   # Copy the screenshot-tool and lib/ directory to your desired location
-   cp -r screenshot-tool lib/ ~/.local/bin/
+   # Copy the hyss and lib/ directory to your desired location
+   cp -r hyss lib/ ~/.local/bin/
    ```
 
 2. **Verify dependencies:**
    ```bash
-   ./screenshot-tool-update check
+   hyss update check
    ```
 
 3. **Run initial setup:**
    ```bash
-   ./screenshot-tool-update test
+   hyss update test
    ```
 
 ## Usage
@@ -80,28 +82,58 @@ Add keybindings to your DE configuration:
 
 ```bash
 # Example keybindings (adapt to your DE)
-Super+P              exec /path/to/screenshot-tool area
-Super+Ctrl+P         exec /path/to/screenshot-tool freeze
-Super+Alt+P          exec /path/to/screenshot-tool monitor
-Print                exec /path/to/screenshot-tool screen
-Super+Shift+S        exec /path/to/screenshot-tool ocr
+Super+P              exec /path/to/hyss area
+Super+Ctrl+P         exec /path/to/hyss freeze
+Super+Alt+P          exec /path/to/hyss monitor
+Print                exec /path/to/hyss screen
+Super+Shift+S        exec /path/to/hyss ocr
 ```
 
 ### Environment Variables
 
 ```bash
 # Force specific annotation tool
-export SCREENSHOT_ANNOTATION_TOOL=satty
+export HYSS_ANNOTATION_TOOL=satty
 
 # Skip annotation step
-export SCREENSHOT_NO_ANNOTATION=1
+export HYSS_NO_ANNOTATION=1
 
 # Copy to clipboard only (don't save file)
-export SCREENSHOT_COPY_ONLY=1
+export HYSS_COPY_ONLY=1
 
 # Custom save directory
-./screenshot-tool area ~/Desktop/screenshots
+hyss area ~/Desktop/screenshots
 ```
+
+### Configuration Management
+
+HyprScreenShot uses a TOML configuration file for user-friendly settings:
+
+```bash
+# Show current configuration
+hyss config show
+
+# Edit configuration file
+hyss config edit
+
+# Get specific setting
+hyss config get notifications enabled
+
+# Set specific setting
+hyss config set notifications enabled false
+
+# Create default configuration
+hyss config init
+
+# Validate configuration
+hyss config validate
+```
+
+The configuration file is located at `~/.config/hyss/config.toml` and supports:
+- Notification settings (enabled, app name, urgency, timeout)
+- Default directories and filename formats
+- Annotation tool preferences
+- Clipboard behavior settings
 
 ## Update Management
 
@@ -117,29 +149,29 @@ The tool automatically:
 
 ```bash
 # Check system status and detect updates
-./screenshot-tool-update check
+hyss update check
 
 # Run comprehensive compatibility tests
-./screenshot-tool-update test
+hyss update test
 
 # Generate detailed status report
-./screenshot-tool-update report
+hyss update report
 
 # Force regenerate all configurations
-./screenshot-tool-update force-regen
+hyss update force-regen
 
 # Show migration and test history
-./screenshot-tool-update history
+hyss update history
 
 # Clean old data and backups
-./screenshot-tool-update clean
+hyss update clean
 ```
 
 ### Interactive Update Manager
 
 ```bash
 # Launch interactive update manager
-./screenshot-tool-update interactive
+hyss update interactive
 ```
 
 ## Architecture
@@ -168,11 +200,12 @@ The system maintains compatibility through:
 ### Data Storage
 
 ```
-~/.config/screenshot-tool/          # Configuration files
+~/.config/hyss/                    # Configuration files
+├── config.toml                    # Main configuration file
 ├── satty/config.toml              # Satty annotation config
 └── swappy/config                  # Swappy annotation config
 
-~/.local/share/screenshot-tool/    # Data and cache
+~/.local/share/hyss/               # Data and cache
 ├── tool-capabilities.json         # Cached tool capabilities
 ├── migration-metadata.json        # Migration tracking
 └── compatibility-test-results.json # Test results
@@ -187,7 +220,7 @@ The system maintains compatibility through:
 **1. "Missing required dependencies"**
 ```bash
 # Check which tools are missing
-./screenshot-tool-update status
+hyss update status
 
 # Install missing tools (example for Arch Linux)
 sudo pacman -S grim slurp wl-clipboard satty
@@ -196,11 +229,11 @@ sudo pacman -S grim slurp wl-clipboard satty
 **2. "Annotation tool failed"**
 ```bash
 # Check annotation tool status
-./screenshot-tool-update test
+hyss update test
 
 # Try alternative annotation tool
-export SCREENSHOT_ANNOTATION_TOOL=swappy
-./screenshot-tool area
+export HYSS_ANNOTATION_TOOL=swappy
+hyss area
 ```
 
 **3. "Clipboard integration not working"**
@@ -216,17 +249,17 @@ wl-paste
 **4. "Configuration errors after tool updates"**
 ```bash
 # Force regenerate configurations
-./screenshot-tool-update force-regen
+hyss update force-regen
 
 # Check migration history
-./screenshot-tool-update history
+hyss update history
 ```
 
 ### Debug Mode
 
 Enable verbose output for troubleshooting:
 ```bash
-./screenshot-tool-update check --verbose
+hyss update check --verbose
 ```
 
 ### Compatibility Reports
@@ -234,10 +267,10 @@ Enable verbose output for troubleshooting:
 Generate detailed compatibility reports:
 ```bash
 # Generate report file
-./screenshot-tool-update report > screenshot-tool-report.txt
+hyss update report > hyss-report.txt
 
 # View current status
-./screenshot-tool-update status
+hyss update status
 ```
 
 ## Advanced Features
@@ -256,14 +289,14 @@ Examples of advanced usage:
 
 ```bash
 # Screenshot with custom processing
-./screenshot-tool area && convert ~/Pictures/Screenshots/latest.png -resize 50% ~/Pictures/Screenshots/thumbnail.png
+hyss area && convert ~/Pictures/Screenshots/latest.png -resize 50% ~/Pictures/Screenshots/thumbnail.png
 
 # OCR with custom language
-TESSERACT_OPTS="-l fra" ./screenshot-tool ocr
+TESSERACT_OPTS="-l fra" hyss ocr
 
 # Automated screenshot series
 for i in {1..5}; do
-    ./screenshot-tool screen ~/Desktop/series_$i.png
+    hyss screen ~/Desktop/series_$i.png
     sleep 2
 done
 ```
@@ -274,8 +307,8 @@ Create custom annotation configurations:
 
 ```bash
 # Custom Satty config
-mkdir -p ~/.config/screenshot-tool/satty
-cat > ~/.config/screenshot-tool/satty/config.toml << 'EOF'
+mkdir -p ~/.config/hyss/satty
+cat > ~/.config/hyss/satty/config.toml << 'EOF'
 [general]
 initial-tool = "rectangle"
 corner-roundness = 0
@@ -300,10 +333,10 @@ The modular architecture makes it easy to:
 
 ```bash
 # Run full test suite
-./screenshot-tool-update test
+hyss update test
 
 # Test specific functionality
-./screenshot-tool-update test --verbose
+hyss update test --verbose
 ```
 
 ### Contributing
