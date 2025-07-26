@@ -54,17 +54,16 @@ detect_grim_capabilities() {
     
     TOOL_CAPABILITIES[grim_available]=true
     
-    # Get version
-    local version
-    version=$(grim --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    # Get version (grim doesn't provide version info easily)
+    local version=""
     TOOL_VERSIONS[grim]="$version"
     
     # Test capabilities
-    TOOL_CAPABILITIES[grim_geometry]=$(grim --help 2>/dev/null | grep -q -- "-g" && echo true || echo false)
-    TOOL_CAPABILITIES[grim_output]=$(grim --help 2>/dev/null | grep -q -- "-o" && echo true || echo false)
-    TOOL_CAPABILITIES[grim_cursor]=$(grim --help 2>/dev/null | grep -q -- "-c" && echo true || echo false)
-    TOOL_CAPABILITIES[grim_scale]=$(grim --help 2>/dev/null | grep -q -- "-s" && echo true || echo false)
-    TOOL_CAPABILITIES[grim_stdout]=$(grim --help 2>/dev/null | grep -q -- "'-'" && echo true || echo false)
+    TOOL_CAPABILITIES[grim_geometry]=$(grim -h 2>/dev/null | grep -q -- "-g" && echo true || echo false)
+    TOOL_CAPABILITIES[grim_output]=$(grim -h 2>/dev/null | grep -q -- "-o" && echo true || echo false)
+    TOOL_CAPABILITIES[grim_cursor]=$(grim -h 2>/dev/null | grep -q -- "-c" && echo true || echo false)
+    TOOL_CAPABILITIES[grim_scale]=$(grim -h 2>/dev/null | grep -q -- "-s" && echo true || echo false)
+    TOOL_CAPABILITIES[grim_stdout]=$(grim -h 2>/dev/null | grep -q -- "'-'" && echo true || echo false)
 }
 
 # Slurp (area selection) detection
@@ -76,15 +75,14 @@ detect_slurp_capabilities() {
     
     TOOL_CAPABILITIES[slurp_available]=true
     
-    # Get version
-    local version
-    version=$(slurp --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+    # Get version (slurp doesn't provide version info easily)
+    local version=""
     TOOL_VERSIONS[slurp]="$version"
     
     # Test capabilities
-    TOOL_CAPABILITIES[slurp_display]=$(slurp --help 2>/dev/null | grep -q -- "-d" && echo true || echo false)
-    TOOL_CAPABILITIES[slurp_border]=$(slurp --help 2>/dev/null | grep -q -- "-b" && echo true || echo false)
-    TOOL_CAPABILITIES[slurp_aspect]=$(slurp --help 2>/dev/null | grep -q -- "-a" && echo true || echo false)
+    TOOL_CAPABILITIES[slurp_display]=$(slurp -h 2>/dev/null | grep -q -- "-d" && echo true || echo false)
+    TOOL_CAPABILITIES[slurp_border]=$(slurp -h 2>/dev/null | grep -q -- "-b" && echo true || echo false)
+    TOOL_CAPABILITIES[slurp_aspect]=$(slurp -h 2>/dev/null | grep -q -- "-a" && echo true || echo false)
 }
 
 # Clipboard capabilities
@@ -263,7 +261,13 @@ cache_capabilities() {
             local first=true
             for key in "${!TOOL_CAPABILITIES[@]}"; do
                 [[ "$first" == "false" ]] && echo ","
-                printf "    \"%s\": %s" "$key" "${TOOL_CAPABILITIES[$key]}"
+                local value="${TOOL_CAPABILITIES[$key]}"
+                # Quote non-boolean values
+                if [[ "$value" == "true" ]] || [[ "$value" == "false" ]]; then
+                    printf "    \"%s\": %s" "$key" "$value"
+                else
+                    printf "    \"%s\": \"%s\"" "$key" "$value"
+                fi
                 first=false
             done
             echo ""
@@ -298,19 +302,19 @@ load_cached_capabilities() {
     if [[ -f "$TOOL_CACHE_FILE" ]] && command -v jq >/dev/null 2>&1; then
         # Load from JSON cache
         while IFS='=' read -r key value; do
-            TOOL_CAPABILITIES[$key]="$value"
+            [[ -n "$key" ]] && TOOL_CAPABILITIES[$key]="$value"
         done < <(jq -r '.capabilities | to_entries[] | "\(.key)=\(.value)"' "$TOOL_CACHE_FILE" 2>/dev/null || echo "")
         
         while IFS='=' read -r key value; do
-            TOOL_VERSIONS[$key]="$value"
+            [[ -n "$key" ]] && TOOL_VERSIONS[$key]="$value"
         done < <(jq -r '.versions | to_entries[] | "\(.key)=\(.value)"' "$TOOL_CACHE_FILE" 2>/dev/null || echo "")
     else
         # Load from simple format
         if [[ -f "$TOOL_CACHE_FILE" ]]; then
             while IFS='=' read -r key value; do
-                if [[ "$key" =~ ^CAPABILITY_ ]]; then
+                if [[ -n "$key" ]] && [[ "$key" =~ ^CAPABILITY_ ]]; then
                     TOOL_CAPABILITIES[${key#CAPABILITY_}]="$value"
-                elif [[ "$key" =~ ^VERSION_ ]]; then
+                elif [[ -n "$key" ]] && [[ "$key" =~ ^VERSION_ ]]; then
                     TOOL_VERSIONS[${key#VERSION_}]="$value"
                 fi
             done < "$TOOL_CACHE_FILE"

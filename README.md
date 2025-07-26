@@ -37,23 +37,61 @@ HyprScreenShot provides a **portable, DE-agnostic screenshot system** that autom
 - `jq` - Enhanced JSON processing for advanced features
 - `notify-send` - Desktop notifications
 
-### Setup
+### Installation
 
-1. **Clone or copy the tool files:**
-   ```bash
-   # Copy the hyss and lib/ directory to your desired location
-   cp -r hyss lib/ ~/.local/bin/
-   ```
+HyprScreenShot provides a simple "plug and play" installation script that works immediately after installation.
 
-2. **Verify dependencies:**
-   ```bash
-   hyss update check
-   ```
+#### Quick Installation
 
-3. **Run initial setup:**
-   ```bash
-   hyss update test
-   ```
+**System-wide installation (recommended):**
+```bash
+# Download and extract HyprScreenShot
+# Then run:
+sudo ./install.sh
+```
+
+**User-local installation:**
+```bash
+./install.sh --user
+```
+
+#### Installation Options
+
+```bash
+# Show installation help
+./install.sh --help
+
+# Force overwrite existing installation
+./install.sh --force
+
+# User installation with force overwrite
+./install.sh --user --force
+```
+
+#### Post-Installation Verification
+
+After installation, verify everything works:
+
+```bash
+# Check that hyss is available
+hyss version
+
+# Verify system dependencies
+hyss update check
+
+# Run compatibility tests
+hyss update test
+```
+
+#### Directory Structure
+
+**System-wide installation:**
+- Executable: `/usr/local/bin/hyss`
+- Libraries: `/usr/local/share/hyss/lib/`
+
+**User installation:**
+- Executable: `~/.local/bin/hyss`
+- Libraries: `~/.local/share/hyss/lib/`
 
 ## Usage
 
@@ -61,19 +99,19 @@ HyprScreenShot provides a **portable, DE-agnostic screenshot system** that autom
 
 ```bash
 # Interactive area/window selection
-./screenshot-tool area
+hyss area
 
 # Frozen screen selection (easier targeting)
-./screenshot-tool freeze
+hyss freeze
 
 # Current monitor
-./screenshot-tool monitor
+hyss monitor
 
 # All monitors
-./screenshot-tool screen
+hyss screen
 
 # OCR text extraction to clipboard
-./screenshot-tool ocr
+hyss ocr
 ```
 
 ### Desktop Environment Integration
