@@ -1,6 +1,6 @@
 # Contributing to HySS
 
-Thank you for your interest in contributing to HySS (HyprShot System)! This document provides guidelines for contributing to the project.
+Thank you for your interest in contributing to HySS! This document provides guidelines for contributing to the project.
 
 ## Development Workflow
 
@@ -24,7 +24,7 @@ Thank you for your interest in contributing to HySS (HyprShot System)! This docu
    ```bash
    # Install dependencies (example for Arch Linux)
    sudo pacman -S grim slurp wl-clipboard satty tesseract jq
-   
+
    # Run compatibility check
    ./screenshot-tool-update check
    ```
