@@ -49,9 +49,13 @@ capture_area_frozen() {
     
     # Cleanup function for frozen screen
     cleanup_freeze() {
-        if [[ -n "$freeze_pid" ]] && kill -0 "$freeze_pid" 2>/dev/null; then
-            kill "$freeze_pid" 2>/dev/null || true
+        # Temporarily disable unbound variable check to prevent errors
+        set +u
+        if [[ -n "${freeze_pid:-}" ]] && kill -0 "${freeze_pid:-}" 2>/dev/null; then
+            kill "${freeze_pid:-}" 2>/dev/null || true
         fi
+        # Re-enable unbound variable check
+        set -u
     }
     trap cleanup_freeze RETURN
     
