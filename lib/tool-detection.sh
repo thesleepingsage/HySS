@@ -40,6 +40,7 @@ detect_all_capabilities() {
     detect_ocr_capabilities
     detect_imagemagick_capabilities
     detect_notification_capabilities
+    detect_jq_capabilities
     
     # Screen manipulation tools
     detect_screen_freeze_capabilities
@@ -197,6 +198,21 @@ detect_notification_capabilities() {
     fi
 }
 
+# jq capabilities
+detect_jq_capabilities() {
+    TOOL_CAPABILITIES[jq_available]=$(command -v jq >/dev/null 2>&1 && echo true || echo false)
+    
+    if [[ "${TOOL_CAPABILITIES[jq_available]}" == "true" ]]; then
+        # Get version
+        local version
+        version=$(jq --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+        TOOL_VERSIONS[jq]="$version"
+        
+        # Test basic jq functionality
+        TOOL_CAPABILITIES[jq_basic]=$(echo '{"test": "value"}' | jq -r '.test' 2>/dev/null | grep -q "value" && echo true || echo false)
+    fi
+}
+
 # Screen freeze capabilities
 detect_screen_freeze_capabilities() {
     TOOL_CAPABILITIES[hyprpicker_available]=$(command -v hyprpicker >/dev/null 2>&1 && echo true || echo false)
@@ -218,6 +234,10 @@ check_required_tools() {
     [[ "${TOOL_CAPABILITIES[grim_available]:-false}" != "true" ]] && missing_tools+=("grim")
     [[ "${TOOL_CAPABILITIES[slurp_available]:-false}" != "true" ]] && missing_tools+=("slurp")
     [[ "${TOOL_CAPABILITIES[wl_copy_available]:-false}" != "true" ]] && missing_tools+=("wl-copy")
+    [[ "${TOOL_CAPABILITIES[imagemagick_available]:-false}" != "true" ]] && missing_tools+=("imagemagick")
+    [[ "${TOOL_CAPABILITIES[tesseract_available]:-false}" != "true" ]] && missing_tools+=("tesseract")
+    [[ "${TOOL_CAPABILITIES[jq_available]:-false}" != "true" ]] && missing_tools+=("jq")
+    [[ "${TOOL_CAPABILITIES[notify_send_available]:-false}" != "true" ]] && missing_tools+=("notify-send")
     
     # At least one annotation tool
     if [[ "${TOOL_CAPABILITIES[satty_available]:-false}" != "true" ]] && [[ "${TOOL_CAPABILITIES[swappy_available]:-false}" != "true" ]]; then
@@ -340,6 +360,22 @@ print_capability_report() {
     [[ -n "${TOOL_VERSIONS[wl-copy]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[wl-copy]}"
     echo ""
     
+    printf "  imagemagick: %s" "${TOOL_CAPABILITIES[imagemagick_available]:-false}"
+    [[ -n "${TOOL_VERSIONS[imagemagick]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[imagemagick]}"
+    echo ""
+    
+    printf "  tesseract: %s" "${TOOL_CAPABILITIES[tesseract_available]:-false}"
+    [[ -n "${TOOL_VERSIONS[tesseract]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[tesseract]}"
+    echo ""
+    
+    printf "  jq:       %s" "${TOOL_CAPABILITIES[jq_available]:-false}"
+    [[ -n "${TOOL_VERSIONS[jq]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[jq]}"
+    echo ""
+    
+    printf "  notify-send: %s" "${TOOL_CAPABILITIES[notify_send_available]:-false}"
+    [[ -n "${TOOL_VERSIONS[notify-send]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[notify-send]}"
+    echo ""
+    
     echo ""
     echo "Annotation Tools:"
     printf "  satty:    %s" "${TOOL_CAPABILITIES[satty_available]:-false}"
@@ -348,16 +384,6 @@ print_capability_report() {
     
     printf "  swappy:   %s" "${TOOL_CAPABILITIES[swappy_available]:-false}"
     [[ -n "${TOOL_VERSIONS[swappy]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[swappy]}"
-    echo ""
-    
-    echo ""
-    echo "Optional Tools:"
-    printf "  tesseract: %s" "${TOOL_CAPABILITIES[tesseract_available]:-false}"
-    [[ -n "${TOOL_VERSIONS[tesseract]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[tesseract]}"
-    echo ""
-    
-    printf "  imagemagick: %s" "${TOOL_CAPABILITIES[imagemagick_available]:-false}"
-    [[ -n "${TOOL_VERSIONS[imagemagick]:-}" ]] && printf " (v%s)" "${TOOL_VERSIONS[imagemagick]}"
     echo ""
     
     echo ""

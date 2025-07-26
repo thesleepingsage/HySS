@@ -26,16 +26,14 @@ HyprScreenShot provides a **portable, DE-agnostic screenshot system** that autom
 - `grim` - Wayland screenshot utility
 - `slurp` - Interactive area selection
 - `wl-copy` (wl-clipboard) - Clipboard integration
+- `imagemagick` - Image processing for OCR and dynamic window sizing
+- `tesseract` + `tesseract-data-eng` - OCR text extraction
+- `jq` - Enhanced JSON processing for advanced features
+- `notify-send` - Desktop notifications
 
 **Annotation Tools (choose one):**
 - `satty` - Modern annotation tool (recommended)
 - `swappy` - Traditional annotation tool
-
-**Optional Enhancements:**
-- `tesseract` + `tesseract-data-eng` - OCR text extraction
-- `imagemagick` - Image processing for better OCR
-- `jq` - Enhanced JSON processing for advanced features
-- `notify-send` - Desktop notifications
 
 ### Installation
 
@@ -261,7 +259,7 @@ The system maintains compatibility through:
 hyss update status
 
 # Install missing tools (example for Arch Linux)
-sudo pacman -S grim slurp wl-clipboard satty
+sudo pacman -S grim slurp wl-clipboard satty imagemagick tesseract tesseract-data-eng jq libnotify
 ```
 
 **2. "Annotation tool failed"**

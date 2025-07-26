@@ -32,9 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testing framework**: Automated compatibility and functionality testing
 
 ### Dependencies
-- Core: grim, slurp, wl-copy
+- Core: grim, slurp, wl-copy, imagemagick, tesseract, jq, notify-send
 - Annotation: satty or swappy
-- Optional: tesseract, imagemagick, jq, notify-send
 
 [Unreleased]: https://github.com/user/HySS/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/user/HySS/releases/tag/v1.0.0
