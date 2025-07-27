@@ -18,40 +18,231 @@ HyprScreenShot provides a **portable, DE-agnostic screenshot system** that autom
 - **Configurable Notifications**: TOML-based configuration with user-friendly management
 - **Subcommand Architecture**: Unified interface for screenshots, updates, and configuration
 
+## Quick Start for Arch Linux
+
+**New to Linux?** This section will guide you through installing HyprScreenShot step-by-step. If you're experienced with Arch Linux, you can skip to the [Installation](#installation) section below.
+
+### Prerequisites Check
+
+Before installing HyprScreenShot, let's verify your system is ready:
+
+1. **Open a terminal**: Press `Ctrl + Alt + T` or search for "Terminal" in your application menu
+
+2. **Check if you're running Wayland** (required for HyprScreenShot):
+   ```bash
+   echo $XDG_SESSION_TYPE
+   # Should output: wayland
+   ```
+
+3. **Verify Hyprland is installed** (if using Hyprland):
+   ```bash
+   hyprctl version
+   # Should show Hyprland version info
+   ```
+
+If either check fails, HyprScreenShot may not work properly on your system.
+
+### Step 1: Install Dependencies
+
+HyprScreenShot needs several packages to work. Install them with pacman:
+
+```bash
+# Update your system first (important!)
+sudo pacman -Syu
+
+# Install core dependencies
+sudo pacman -S grim slurp wl-clipboard imagemagick tesseract tesseract-data-eng jq libnotify
+
+# Install annotation tool (choose one):
+# Option 1: Satty (modern, recommended)
+sudo pacman -S satty
+
+# Option 2: Swappy (traditional alternative)
+sudo pacman -S swappy
+```
+
+**What each package does:**
+- `grim` - Takes screenshots on Wayland
+- `slurp` - Lets you select screen areas
+- `wl-clipboard` - Manages clipboard operations
+- `imagemagick` - Processes images for OCR
+- `tesseract` - Extracts text from images (OCR)
+- `jq` - Processes configuration data
+- `libnotify` - Shows desktop notifications
+- `satty/swappy` - Tools for annotating screenshots
+
+### Step 2: Download HyprScreenShot
+
+Choose one of these methods:
+
+**Method 1: Git Clone (recommended for development)**
+```bash
+# Navigate to your home directory
+cd ~
+
+# Clone the repository
+git clone https://github.com/your-username/HySS.git
+
+# Enter the directory
+cd HySS
+```
+
+**Method 2: Download Release**
+```bash
+# Navigate to your Downloads folder
+cd ~/Downloads
+
+# Download latest release (replace URL with actual release)
+wget https://github.com/your-username/HySS/archive/v1.0.0.tar.gz
+
+# Extract the archive
+tar -xzf v1.0.0.tar.gz
+
+# Enter the extracted directory
+cd HySS-1.0.0
+```
+
+### Step 3: Install HyprScreenShot
+
+Now install HyprScreenShot on your system:
+
+```bash
+# Make the installation script executable
+chmod +x install.sh
+
+# Install system-wide (recommended)
+sudo ./install.sh
+
+# OR install for your user only
+./install.sh --user
+```
+
+**What this does:**
+- Copies `hyss` command to your system
+- Sets up library files
+- Creates necessary directories
+- Makes HyprScreenShot available from anywhere
+
+### Step 4: Verify Installation
+
+Test that everything works:
+
+```bash
+# Check HyprScreenShot is installed
+hyss version
+# Should show: HyprScreenShot version 1.0.0
+
+# Check system status
+hyss update check
+# Should show: ✓ System is up to date and compatible
+
+# Test dependencies
+hyss update status
+# Should show all tools as available (true)
+```
+
+### Step 5: Take Your First Screenshot
+
+Try these basic commands:
+
+```bash
+# Take a screenshot of selected area
+hyss area
+
+# Take a screenshot with frozen screen (easier targeting)
+hyss freeze
+
+# Take fullscreen screenshot
+hyss screen
+
+# Extract text from screen area (OCR)
+hyss ocr
+```
+
+**Expected behavior:**
+- A selection tool will appear
+- Click and drag to select an area
+- Screenshot will be saved and copied to clipboard
+- You'll see a notification confirming success
+
+### Quick Setup Complete! 🎉
+
+HyprScreenShot is now ready to use. For advanced configuration and Hyprland integration, continue reading the sections below.
+
+---
+
 ## Installation
 
-### Dependencies
+> **👆 New to Linux?** Check out the [Quick Start for Arch Linux](#quick-start-for-arch-linux) section above for step-by-step guidance!
 
-**Core Requirements:**
-- `grim` - Wayland screenshot utility
-- `slurp` - Interactive area selection
-- `wl-copy` (wl-clipboard) - Clipboard integration
-- `imagemagick` - Image processing for OCR and dynamic window sizing
-- `tesseract` + `tesseract-data-eng` - OCR text extraction
-- `jq` - Enhanced JSON processing for advanced features
-- `notify-send` - Desktop notifications
+### Dependencies (Arch Linux)
 
-**Annotation Tools (choose one):**
-- `satty` - Modern annotation tool (recommended)
-- `swappy` - Traditional annotation tool
+Install these packages before installing HyprScreenShot:
 
-### Installation
+```bash
+# Update your system first
+sudo pacman -Syu
 
-HyprScreenShot provides a simple "plug and play" installation script that works immediately after installation.
+# Install core dependencies
+sudo pacman -S grim slurp wl-clipboard imagemagick tesseract tesseract-data-eng jq libnotify
 
-#### Quick Installation
+# Install annotation tool (choose one)
+sudo pacman -S satty      # Modern tool (recommended)
+# OR
+sudo pacman -S swappy     # Traditional alternative
+```
+
+**Alternative: AUR Installation**
+```bash
+# Using yay (AUR helper)
+yay -S hyprscreenshot-git
+
+# Manual AUR installation
+git clone https://aur.archlinux.org/hyprscreenshot.git
+cd hyprscreenshot
+makepkg -si
+```
+
+### Manual Installation
+
+For development or customization, install manually:
+
+#### Step 1: Download Source Code
+
+**Option A: Git Clone (for development)**
+```bash
+# Clone the repository
+git clone https://github.com/your-username/HySS.git
+cd HySS
+```
+
+**Option B: Download Release**
+```bash
+# Download latest release
+wget https://github.com/your-username/HySS/releases/download/v1.0.0/HySS-v1.0.0.tar.gz
+
+# Extract and enter directory
+tar -xzf HySS-v1.0.0.tar.gz
+cd HySS-v1.0.0
+```
+
+#### Step 2: Run Installation Script
 
 **System-wide installation (recommended):**
 ```bash
-# Download and extract HyprScreenShot
-# Then run:
+# Make script executable and install
+chmod +x install.sh
 sudo ./install.sh
 ```
+*Installs to `/usr/local/bin/hyss` - available system-wide*
 
 **User-local installation:**
 ```bash
+# Install for current user only
+chmod +x install.sh
 ./install.sh --user
 ```
+*Installs to `~/.local/bin/hyss` - may need to add to PATH*
 
 #### Installation Options
 
@@ -351,6 +542,92 @@ hyss update force-regen
 
 # Check migration history
 hyss update history
+```
+
+**5. "Command not found: hyss"**
+```bash
+# Check if hyss is in your PATH
+which hyss
+
+# If user installation, add to PATH
+echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
+source ~/.bashrc
+
+# Or for zsh users
+echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+**6. "Permission denied" errors**
+```bash
+# Fix executable permissions
+chmod +x ~/.local/bin/hyss
+
+# Or for system installation
+sudo chmod +x /usr/local/bin/hyss
+```
+
+### Arch Linux Specific Issues
+
+**AUR Package Build Failures**
+```bash
+# Update package database first
+sudo pacman -Sy
+
+# Clean AUR cache and rebuild
+yay -Sc
+yay -S hyprscreenshot-git --rebuild
+
+# Manual AUR troubleshooting
+cd ~/.cache/yay/hyprscreenshot-git
+rm -rf src/ pkg/
+yay -S hyprscreenshot-git
+```
+
+**Missing base-devel Group**
+```bash
+# Install essential build tools
+sudo pacman -S base-devel
+
+# Verify git is installed
+sudo pacman -S git
+```
+
+**Wayland Session Issues**
+```bash
+# Check current session type
+echo $XDG_SESSION_TYPE
+
+# If showing 'x11', you need to:
+# 1. Log out of your session
+# 2. Select Wayland session at login screen
+# 3. Or install/configure Wayland compositor
+
+# For Hyprland specifically
+sudo pacman -S hyprland
+# Then log out and select Hyprland session
+```
+
+**Package Conflicts**
+```bash
+# Check for conflicting packages
+pacman -Qo /usr/bin/grim
+
+# Remove conflicting AUR packages
+yay -R conflicting-package
+
+# Reinstall from official repos
+sudo pacman -S grim slurp
+```
+
+**Environment Variables Not Working**
+```bash
+# Check current environment
+env | grep XDG
+
+# Restart your session if variables are missing
+# Or source your shell config
+source ~/.bashrc  # or ~/.zshrc
 ```
 
 ### Debug Mode
