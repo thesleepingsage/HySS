@@ -4,6 +4,9 @@
 # Handles different annotation tools with version compatibility
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Annotate screenshot with available tool
 annotate_screenshot() {
     local input_file="$1"

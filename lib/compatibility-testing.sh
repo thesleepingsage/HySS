@@ -4,6 +4,9 @@
 # Tests tool functionality and compatibility after updates
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Test results file
 TEST_RESULTS_FILE="$DATA_DIR/compatibility-test-results.json"
 

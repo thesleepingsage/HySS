@@ -4,6 +4,9 @@
 # Handles TOML configuration loading and management
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Default configuration values
 HYSS_NOTIFICATIONS="${HYSS_NOTIFICATIONS:-true}"
 HYSS_NOTIFICATION_APP_NAME="${HYSS_NOTIFICATION_APP_NAME:-HyprScreenShot}"

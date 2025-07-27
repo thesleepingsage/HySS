@@ -4,6 +4,9 @@
 # Handles clipboard operations with different tools and methods
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Copy image file to clipboard
 copy_to_clipboard() {
     local image_file="$1"

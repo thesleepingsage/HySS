@@ -4,6 +4,9 @@
 # Handles different screenshot capture methods with version compatibility
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Capture area interactively
 capture_area() {
     local output_file="$1"

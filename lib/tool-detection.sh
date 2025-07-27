@@ -4,6 +4,9 @@
 # Handles version detection and feature capability mapping
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Global capability flags
 declare -A TOOL_CAPABILITIES
 declare -A TOOL_VERSIONS

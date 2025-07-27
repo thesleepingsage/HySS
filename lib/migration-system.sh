@@ -4,6 +4,9 @@
 # Handles updates and migrations between tool versions
 #
 
+# Enable strict error handling
+set -euo pipefail
+
 # Migration metadata file
 MIGRATION_DATA_FILE="$DATA_DIR/migration-metadata.json"
 
