@@ -41,3 +41,4 @@ ocr_*.png
 # Development tooling (local only)
 .claude/
 CLAUDE.md
+.github/workflows
