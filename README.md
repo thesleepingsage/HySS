@@ -81,7 +81,7 @@ Choose one of these methods:
 cd ~
 
 # Clone the repository
-git clone https://github.com/your-username/HySS.git
+git clone https://github.com/thesleepingsage/HySS.git
 
 # Enter the directory
 cd HySS
@@ -92,8 +92,8 @@ cd HySS
 # Navigate to your Downloads folder
 cd ~/Downloads
 
-# Download latest release (replace URL with actual release)
-wget https://github.com/your-username/HySS/archive/v1.0.0.tar.gz
+# Download latest release
+wget https://github.com/thesleepingsage/HySS/archive/v1.0.0.tar.gz
 
 # Extract the archive
 tar -xzf v1.0.0.tar.gz
@@ -212,14 +212,14 @@ For development or customization, install manually:
 **Option A: Git Clone (for development)**
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/HySS.git
+git clone https://github.com/thesleepingsage/HySS.git
 cd HySS
 ```
 
 **Option B: Download Release**
 ```bash
 # Download latest release
-wget https://github.com/your-username/HySS/releases/download/v1.0.0/HySS-v1.0.0.tar.gz
+wget https://github.com/thesleepingsage/HySS/releases/download/v1.0.0/HySS-v1.0.0.tar.gz
 
 # Extract and enter directory
 tar -xzf HySS-v1.0.0.tar.gz
