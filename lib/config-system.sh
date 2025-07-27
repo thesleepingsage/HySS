@@ -48,7 +48,7 @@ create_default_config() {
 [general]
 # HyprScreenShot Configuration
 app_name = "hyss"
-version = "1.0.0"
+version = "1.0.1"
 
 [notifications]
 enabled = true
