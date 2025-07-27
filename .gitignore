@@ -42,3 +42,4 @@ ocr_*.png
 .claude/
 CLAUDE.md
 .github/workflows*
+commands/
