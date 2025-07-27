@@ -43,3 +43,4 @@ ocr_*.png
 CLAUDE.md
 .github/workflows*
 commands/
+tasks/
