@@ -49,9 +49,13 @@ capture_area_frozen() {
     
     # Cleanup function for frozen screen
     cleanup_freeze() {
-        if [[ -n "$freeze_pid" ]] && kill -0 "$freeze_pid" 2>/dev/null; then
-            kill "$freeze_pid" 2>/dev/null || true
+        # Temporarily disable unbound variable check to prevent errors
+        set +u
+        if [[ -n "${freeze_pid:-}" ]] && kill -0 "${freeze_pid:-}" 2>/dev/null; then
+            kill "${freeze_pid:-}" 2>/dev/null || true
         fi
+        # Re-enable unbound variable check
+        set -u
     }
     trap cleanup_freeze RETURN
     
@@ -235,7 +239,7 @@ extract_text_ocr() {
     
     # Cleanup function
     cleanup_ocr() {
-        [[ -f "$ocr_temp" ]] && rm -f "$ocr_temp"
+        [[ -n "${ocr_temp:-}" ]] && [[ -f "$ocr_temp" ]] && rm -f "$ocr_temp"
     }
     trap cleanup_ocr RETURN
     
@@ -278,17 +282,11 @@ extract_text_ocr() {
         echo "$extracted_text" | copy_text_to_clipboard
         
         # Show notification with preview
-        if [[ "${TOOL_CAPABILITIES[notify_send_available]:-false}" == "true" ]]; then
-            local preview
-            preview=$(echo "$extracted_text" | head -c 100)
-            [[ ${#extracted_text} -gt 100 ]] && preview="$preview..."
-            
-            if [[ "${TOOL_CAPABILITIES[notify_images]:-false}" == "true" ]]; then
-                notify-send -a "Screenshot Tool" "OCR Text Extracted" "$preview" -i "$ocr_temp"
-            else
-                notify-send -a "Screenshot Tool" "OCR Text Extracted" "$preview"
-            fi
-        fi
+        local preview
+        preview=$(echo "$extracted_text" | head -c 100)
+        [[ ${#extracted_text} -gt 100 ]] && preview="$preview..."
+        
+        notify_hyss "OCR Text Extracted: $preview" "$ocr_temp"
         
         echo "Text extracted and copied to clipboard:"
         echo "$extracted_text"

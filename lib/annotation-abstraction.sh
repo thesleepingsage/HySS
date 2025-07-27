@@ -34,6 +34,81 @@ annotate_screenshot() {
     esac
 }
 
+# Calculate optimal satty window size based on image dimensions
+calculate_satty_window_size() {
+    local image_file="$1"
+    
+    # Use configured values (defaults already loaded in config system)
+    local min_width="${HYSS_SATTY_MIN_WIDTH:-800}"
+    local min_height="${HYSS_SATTY_MIN_HEIGHT:-600}"
+    local toolbar_height="${HYSS_SATTY_TOOLBAR_HEIGHT:-150}"
+    local padding="${HYSS_SATTY_PADDING:-50}"
+    
+    # Get image dimensions using ImageMagick if available
+    local image_width=0
+    local image_height=0
+    
+    if [[ "${TOOL_CAPABILITIES[imagemagick_available]:-false}" == "true" ]]; then
+        local magick_cmd="${TOOL_CAPABILITIES[imagemagick_command]:-magick}"
+        
+        # Try to get image dimensions
+        if image_width=$(identify -format "%w" "$image_file" 2>/dev/null) && \
+           image_height=$(identify -format "%h" "$image_file" 2>/dev/null); then
+            
+            # Calculate optimal window size
+            local optimal_width=$((image_width + padding))
+            local optimal_height=$((image_height + toolbar_height + padding))
+            
+            # Use maximum of minimum size and optimal size
+            SATTY_WINDOW_WIDTH=$((optimal_width > min_width ? optimal_width : min_width))
+            SATTY_WINDOW_HEIGHT=$((optimal_height > min_height ? optimal_height : min_height))
+            
+            # Set reasonable maximums to prevent huge windows
+            local max_width=1920
+            local max_height=1080
+            
+            [[ $SATTY_WINDOW_WIDTH -gt $max_width ]] && SATTY_WINDOW_WIDTH=$max_width
+            [[ $SATTY_WINDOW_HEIGHT -gt $max_height ]] && SATTY_WINDOW_HEIGHT=$max_height
+            
+            return 0
+        fi
+    fi
+    
+    # Fallback to minimum sizes if image analysis fails
+    SATTY_WINDOW_WIDTH=$min_width
+    SATTY_WINDOW_HEIGHT=$min_height
+    return 0
+}
+
+# Resize satty window using hyprctl (Hyprland-specific)
+resize_satty_window() {
+    local target_width="$1"
+    local target_height="$2"
+    
+    # Only attempt if hyprctl is available and we're in Hyprland
+    if ! command -v hyprctl >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    # Give satty a moment to start up
+    sleep 0.5
+    
+    # Try to resize the satty window
+    if hyprctl dispatch resizeactive exact "${target_width}" "${target_height}" >/dev/null 2>&1; then
+        return 0
+    fi
+    
+    # Alternative approach: find satty window and resize it
+    local satty_window
+    if satty_window=$(hyprctl clients -j 2>/dev/null | jq -r '.[] | select(.class == "satty") | .address' 2>/dev/null | head -1); then
+        if [[ -n "$satty_window" ]]; then
+            hyprctl dispatch resizewindowpixel exact "${target_width}" "${target_height},address:${satty_window}" >/dev/null 2>&1
+        fi
+    fi
+    
+    return 0
+}
+
 # Annotate with Satty
 annotate_with_satty() {
     local input_file="$1"
@@ -84,11 +159,35 @@ annotate_with_satty() {
         [[ -f "$satty_config" ]] && satty_args+=("--config" "$satty_config")
     fi
     
+    # Calculate optimal window size based on image dimensions
+    echo "Calculating optimal window size..."
+    calculate_satty_window_size "$input_file"
+    
+    # Check if auto-sizing is enabled (default: true)
+    local auto_size="${HYSS_SATTY_AUTO_SIZE:-true}"
+    
     # Launch satty
     echo "Opening annotation tool (satty)..."
-    if ! satty "${satty_args[@]}"; then
-        echo "Error: satty annotation failed" >&2
-        return 1
+    
+    if [[ "$auto_size" == "true" ]] && command -v hyprctl >/dev/null 2>&1; then
+        # Launch satty in background and resize window
+        satty "${satty_args[@]}" &
+        local satty_pid=$!
+        
+        # Resize the window after launch
+        resize_satty_window "$SATTY_WINDOW_WIDTH" "$SATTY_WINDOW_HEIGHT"
+        
+        # Wait for satty to complete
+        if ! wait $satty_pid; then
+            echo "Error: satty annotation failed" >&2
+            return 1
+        fi
+    else
+        # Standard launch without window management
+        if ! satty "${satty_args[@]}"; then
+            echo "Error: satty annotation failed" >&2
+            return 1
+        fi
     fi
     
     return 0

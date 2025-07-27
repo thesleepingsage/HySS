@@ -1,0 +1,471 @@
+#!/usr/bin/env bash
+#
+# HyprScreenShot - Update-Resilient Screenshot Utility
+# Based on HyDE's implementation with abstraction layer for maintainability
+#
+# Usage: hyss [command|mode] [options]
+# Commands: update, config, help, version
+# Screenshot Modes: area, freeze, monitor, screen, ocr
+
+set -euo pipefail
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hyss"
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/hyss"
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/hyss"
+PICTURES_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}"
+
+# Ensure directories exist
+mkdir -p "$CONFIG_DIR" "$DATA_DIR" "$CACHE_DIR" "$PICTURES_DIR/Screenshots"
+
+# Find library directory - supports multiple installation methods
+find_lib_dir() {
+    local candidates=(
+        "$SCRIPT_DIR/lib"                              # Development/current directory
+        "$SCRIPT_DIR/../share/hyss/lib"                # System install (/usr/local/bin + /usr/local/share)
+        "${HOME}/.local/share/hyss/lib"                # User install
+        "${XDG_DATA_HOME:-$HOME/.local/share}/hyss/lib" # XDG compliant
+        "/usr/local/share/hyss/lib"                    # System-wide installation
+        "/usr/share/hyss/lib"                          # Distribution package
+    )
+    
+    for dir in "${candidates[@]}"; do
+        if [[ -d "$dir" && -f "$dir/tool-detection.sh" ]]; then
+            echo "$dir"
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Locate library directory
+LIB_DIR=$(find_lib_dir) || {
+    echo "Error: Could not locate HySS library directory" >&2
+    echo "Searched locations:" >&2
+    echo "  - $SCRIPT_DIR/lib (development)" >&2
+    echo "  - $SCRIPT_DIR/../share/hyss/lib (system install)" >&2
+    echo "  - ${HOME}/.local/share/hyss/lib (user install)" >&2
+    echo "  - ${XDG_DATA_HOME:-$HOME/.local/share}/hyss/lib (XDG)" >&2
+    echo "  - /usr/local/share/hyss/lib (system-wide)" >&2
+    echo "  - /usr/share/hyss/lib (distribution)" >&2
+    echo "" >&2
+    echo "Please ensure HySS is properly installed or run from the source directory." >&2
+    exit 1
+}
+
+# Source abstraction modules
+source "$LIB_DIR/tool-detection.sh"
+source "$LIB_DIR/capture-abstraction.sh"
+source "$LIB_DIR/annotation-abstraction.sh"
+source "$LIB_DIR/clipboard-abstraction.sh"
+source "$LIB_DIR/config-system.sh"
+source "$LIB_DIR/migration-system.sh"
+source "$LIB_DIR/compatibility-testing.sh"
+
+# Initialize configuration system
+init_hyss_config
+
+# Lock file management
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/hyss.lock"
+cleanup() {
+    [[ -f "$LOCK_FILE" ]] && rm -f "$LOCK_FILE"
+    if [[ -n "${TEMP_SCREENSHOT:-}" ]] && [[ -f "$TEMP_SCREENSHOT" ]]; then
+        rm -f "$TEMP_SCREENSHOT"
+    fi
+}
+trap cleanup EXIT
+
+acquire_lock() {
+    if [[ -e "$LOCK_FILE" ]]; then
+        echo "Another HyprScreenShot operation is in progress" >&2
+        exit 2
+    fi
+    touch "$LOCK_FILE"
+}
+
+# Version information
+HYSS_VERSION="1.0.0"
+
+show_version() {
+    echo "HyprScreenShot v$HYSS_VERSION"
+    echo "Update-resilient screenshot utility for Wayland"
+    echo ""
+    echo "Based on HyDE's implementation with enhanced maintainability"
+}
+
+show_help() {
+    cat << 'EOF'
+HyprScreenShot - Update-Resilient Screenshot Utility
+
+Usage: hyss [command|mode] [options]
+
+Screenshot Modes:
+  area, a      Interactive area/window selection
+  freeze, f    Frozen screen area selection
+  monitor, m   Current monitor capture
+  screen, s    All monitors capture
+  ocr, o       OCR text extraction to clipboard
+
+Management Commands:
+  update       Update management and system maintenance
+  config       Configuration management
+  help         Show this help message
+  version      Show version information
+
+Options:
+  output_dir   Custom save directory (default: configured or ~/Pictures/Screenshots)
+
+Environment Variables:
+  HYSS_NOTIFICATIONS        Enable/disable notifications (true|false)
+  HYSS_ANNOTATION_TOOL      Force specific tool (satty|swappy|none)
+  HYSS_COPY_ONLY           Only copy to clipboard, don't save file
+  HYSS_NO_ANNOTATION       Skip annotation step
+
+Examples:
+  hyss area                    # Interactive area selection
+  hyss freeze                  # Frozen screen selection
+  hyss ocr                     # OCR text extraction
+  hyss update check            # Check for tool updates
+  hyss config show             # Show current configuration
+  hyss config edit             # Edit configuration file
+
+For more information on specific commands:
+  hyss update help             # Update command help
+  hyss config help             # Config command help
+EOF
+}
+
+# Screenshot workflow functions
+take_screenshot() {
+    local mode="$1"
+    local output_dir="${2:-}"
+
+    # Initialize temporary file
+    TEMP_SCREENSHOT=$(mktemp -t hyss_XXXXXX.png)
+    chmod 600 "$TEMP_SCREENSHOT"
+
+    # Determine save directory and filename
+    local save_dir
+    if [[ -n "$output_dir" ]]; then
+        save_dir="$output_dir"
+    elif [[ -n "$HYSS_DEFAULT_DIRECTORY" ]]; then
+        save_dir="$HYSS_DEFAULT_DIRECTORY"
+    else
+        save_dir="$PICTURES_DIR/Screenshots"
+    fi
+
+    local save_file
+    save_file=$(date +"$HYSS_FILENAME_FORMAT")
+    local save_path="$save_dir/$save_file"
+
+    mkdir -p "$save_dir"
+
+
+    case "$mode" in
+        area|a)
+            echo "📸 Select area or window..."
+            capture_area "$TEMP_SCREENSHOT" || return 1
+            ;;
+        freeze|f)
+            echo "📸 Frozen screen selection..."
+            capture_area_frozen "$TEMP_SCREENSHOT" || return 1
+            ;;
+        monitor|m)
+            echo "📸 Capturing current monitor..."
+            capture_monitor "$TEMP_SCREENSHOT" || return 1
+            ;;
+        screen|s)
+            echo "📸 Capturing all monitors..."
+            capture_screen "$TEMP_SCREENSHOT" || return 1
+            ;;
+        ocr|o)
+            echo "📝 OCR text extraction..."
+            extract_text_ocr || return 1
+            return 0  # OCR workflow ends here
+            ;;
+        *)
+            echo "Error: Unknown screenshot mode '$mode'" >&2
+            show_help
+            return 1
+            ;;
+    esac
+
+    # Post-capture workflow
+    if [[ -n "${HYSS_COPY_ONLY:-}" ]]; then
+        # Copy to clipboard only
+        copy_to_clipboard "$TEMP_SCREENSHOT"
+        notify_hyss "Screenshot copied to clipboard"
+    elif [[ -n "${HYSS_NO_ANNOTATION:-}" ]] || [[ "$HYSS_ANNOTATION_TOOL" == "none" ]]; then
+        # Save without annotation
+        cp "$TEMP_SCREENSHOT" "$save_path"
+        if [[ "$HYSS_COPY_TO_CLIPBOARD" == "true" ]]; then
+            copy_to_clipboard "$TEMP_SCREENSHOT"
+        fi
+        notify_hyss "Screenshot saved to $save_path" "$save_path"
+    else
+        # Full workflow: save + annotate
+        cp "$TEMP_SCREENSHOT" "$save_path"
+        if [[ "$HYSS_COPY_TO_CLIPBOARD" == "true" ]]; then
+            copy_to_clipboard "$TEMP_SCREENSHOT"
+        fi
+
+        # Launch annotation tool
+        if ! annotate_screenshot "$save_path"; then
+            # Annotation failed, but we still have the basic screenshot
+            notify_hyss "Screenshot saved (annotation failed)" "$save_path"
+        fi
+    fi
+}
+
+# Update management commands
+exec_update_command() {
+    local command="${1:-help}"
+
+    case "$command" in
+        check)
+            shift
+            local verbose=false
+            while [[ $# -gt 0 ]]; do
+                case "$1" in
+                    --verbose) verbose=true ;;
+                    *) break ;;
+                esac
+                shift
+            done
+
+            echo "🔍 Checking HyprScreenShot system status..."
+            init_migration_system
+            init_testing_system
+
+            if [[ "$verbose" == "true" ]]; then
+                print_capability_report
+                echo ""
+            fi
+
+            if check_for_version_changes; then
+                echo "✓ System is up to date and compatible"
+            else
+                echo "⚠️ Compatibility issues detected"
+                return 1
+            fi
+            ;;
+        test)
+            echo "🧪 Running compatibility tests..."
+            init_testing_system
+            run_compatibility_tests
+            ;;
+        migrate)
+            echo "🔄 Running configuration migrations..."
+            init_migration_system
+            check_for_version_changes
+            ;;
+        report)
+            generate_compatibility_report ""
+            ;;
+        clean)
+            shift
+            local force=false
+            [[ "${1:-}" == "--force" ]] && force=true
+
+            if [[ "$force" != "true" ]]; then
+                echo "This will clean old migration data, test results, and backup configurations."
+                read -r -p "Continue? [y/N] " response
+                case "$response" in
+                    [yY][eE][sS]|[yY]) ;;
+                    *) echo "Cancelled"; return 0 ;;
+                esac
+            fi
+
+            clean_migration_data
+            clean_test_history
+            find "$DATA_DIR" -name "*.tmp" -delete 2>/dev/null || true
+            find "$CONFIG_DIR" -name "*.backup.*" -mtime +7 -delete 2>/dev/null || true
+            echo "✓ System data cleaned"
+            ;;
+        status)
+            init_migration_system
+            init_testing_system
+            print_capability_report
+            echo ""
+            show_migration_history
+            echo ""
+            show_test_history
+            ;;
+        history)
+            init_migration_system
+            init_testing_system
+            show_migration_history
+            echo ""
+            show_test_history
+            ;;
+        help|--help)
+            cat << 'EOF'
+HyprScreenShot Update Management
+
+Usage: hyss update [command] [options]
+
+Commands:
+  check         Check for tool updates and compatibility issues
+  test          Run comprehensive compatibility tests
+  migrate       Run configuration migrations for updated tools
+  report        Generate detailed compatibility report
+  clean         Clean old data and temporary files
+  status        Show current tool status and capabilities
+  history       Show migration and test history
+
+Options:
+  --verbose     Enable verbose output (for check command)
+  --force       Force operations without confirmation (for clean command)
+
+Examples:
+  hyss update check --verbose      # Detailed system check
+  hyss update test                 # Run compatibility tests
+  hyss update clean --force        # Clean old data without prompts
+EOF
+            ;;
+        *)
+            echo "Error: Unknown update command '$command'" >&2
+            echo "Run 'hyss update help' for available commands."
+            return 1
+            ;;
+    esac
+}
+
+# Configuration management commands
+exec_config_command() {
+    local command="${1:-help}"
+
+    case "$command" in
+        show)
+            show_hyss_config
+            ;;
+        edit)
+            edit_hyss_config
+            ;;
+        init)
+            create_default_config
+            echo "✓ Default configuration created at $HYSS_CONFIG_FILE"
+            ;;
+        reset)
+            reset_hyss_config
+            ;;
+        validate)
+            validate_hyss_config
+            ;;
+        get)
+            local section="${2:-}"
+            local key="${3:-}"
+            if [[ -z "$section" ]] || [[ -z "$key" ]]; then
+                echo "Usage: hyss config get <section> <key>"
+                echo "Example: hyss config get notifications enabled"
+                return 1
+            fi
+            get_hyss_config_value "$section" "$key"
+            ;;
+        set)
+            local section="${2:-}"
+            local key="${3:-}"
+            local value="${4:-}"
+            if [[ -z "$section" ]] || [[ -z "$key" ]] || [[ -z "$value" ]]; then
+                echo "Usage: hyss config set <section> <key> <value>"
+                echo "Example: hyss config set notifications enabled false"
+                return 1
+            fi
+            set_hyss_config_value "$section" "$key" "$value"
+            ;;
+        help|--help)
+            cat << 'EOF'
+HyprScreenShot Configuration Management
+
+Usage: hyss config [command] [options]
+
+Commands:
+  show          Show current configuration
+  edit          Edit configuration file with default editor
+  init          Create default configuration file
+  reset         Reset configuration to defaults (with backup)
+  validate      Validate configuration file syntax
+  get           Get a configuration value
+  set           Set a configuration value
+
+Examples:
+  hyss config show                           # Show current config
+  hyss config edit                           # Edit with $EDITOR
+  hyss config get notifications enabled      # Get notification setting
+  hyss config set notifications enabled false # Disable notifications
+
+Configuration file location: ~/.config/hyss/config.toml
+EOF
+            ;;
+        *)
+            echo "Error: Unknown config command '$command'" >&2
+            echo "Run 'hyss config help' for available commands."
+            return 1
+            ;;
+    esac
+}
+
+# Main execution logic
+main() {
+    local command="${1:-help}"
+
+    case "$command" in
+        # Screenshot modes
+        area|a|freeze|f|monitor|m|screen|s|ocr|o)
+            # Acquire lock to prevent concurrent operations
+            acquire_lock
+
+            # Initialize tool capabilities for dependency checking
+            init_tool_capabilities
+            
+            # Check dependencies
+            if ! check_required_tools; then
+                echo "Error: Missing required dependencies" >&2
+                echo "Run 'hyss update check' to see what's missing."
+                exit 3
+            fi
+
+            # Execute screenshot workflow
+            if take_screenshot "$@"; then
+                exit 0
+            else
+                echo "Error: Screenshot operation failed" >&2
+                exit 1
+            fi
+            ;;
+
+        # Management commands
+        update)
+            shift
+            exec_update_command "$@"
+            ;;
+        config)
+            shift
+            exec_config_command "$@"
+            ;;
+
+        # Information commands
+        help|--help|-h)
+            show_help
+            ;;
+        version|--version|-v)
+            show_version
+            ;;
+
+        # Unknown command
+        *)
+            if [[ "$command" =~ ^- ]]; then
+                echo "Error: Unknown option '$command'" >&2
+            else
+                echo "Error: Unknown command '$command'" >&2
+            fi
+            echo ""
+            echo "Run 'hyss help' to see all available commands and modes."
+            exit 1
+            ;;
+    esac
+}
+
+# Run main function with all arguments
+main "$@"

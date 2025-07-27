@@ -37,3 +37,7 @@ Thumbs.db
 screenshot_*.png
 ocr_*.png
 *_XXXXXX.png
+
+# Development tooling (local only)
+.claude/
+CLAUDE.md
