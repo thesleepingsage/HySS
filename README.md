@@ -18,6 +18,8 @@ HyprScreenShot provides a **portable, DE-agnostic screenshot system** that autom
 - **Configurable Notifications**: TOML-based configuration with user-friendly management
 - **Subcommand Architecture**: Unified interface for screenshots, updates, and configuration
 
+> **⚠️ Arch Linux Only**: HySS is designed exclusively for Arch Linux and Arch-based distributions. While the tool may work on other distributions, we only provide official support and installation guidance for Arch Linux systems with `pacman`, `yay`, and `paru` package managers.
+
 ## Quick Start for Arch Linux
 
 **New to Linux?** This section will guide you through installing HyprScreenShot step-by-step. If you're experienced with Arch Linux, you can skip to the [Installation](#installation) section below.
@@ -196,6 +198,9 @@ sudo pacman -S swappy     # Traditional alternative
 ```bash
 # Using yay (AUR helper)
 yay -S hyprscreenshot-git
+
+# Using paru (AUR helper)
+paru -S hyprscreenshot-git
 
 # Manual AUR installation
 git clone https://aur.archlinux.org/hyprscreenshot.git
@@ -574,14 +579,23 @@ sudo chmod +x /usr/local/bin/hyss
 # Update package database first
 sudo pacman -Sy
 
-# Clean AUR cache and rebuild
+# For yay users:
 yay -Sc
 yay -S hyprscreenshot-git --rebuild
 
-# Manual AUR troubleshooting
+# For paru users:
+paru -Sc
+paru -S hyprscreenshot-git --rebuild
+
+# Manual AUR troubleshooting (yay)
 cd ~/.cache/yay/hyprscreenshot-git
 rm -rf src/ pkg/
 yay -S hyprscreenshot-git
+
+# Manual AUR troubleshooting (paru)
+cd ~/.cache/paru/clone/hyprscreenshot-git
+rm -rf src/ pkg/
+paru -S hyprscreenshot-git
 ```
 
 **Missing base-devel Group**

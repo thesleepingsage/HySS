@@ -195,107 +195,112 @@ check_existing_installation() {
     fi
 }
 
-# Detect package manager for dependency installation guidance
+# Detect Arch Linux package manager and AUR helper availability
 detect_package_manager() {
-    if command -v pacman >/dev/null 2>&1; then
-        echo "pacman"
-    elif command -v apt >/dev/null 2>&1; then
-        echo "apt"
-    elif command -v dnf >/dev/null 2>&1; then
-        echo "dnf"
-    elif command -v yum >/dev/null 2>&1; then
-        echo "yum"
-    elif command -v zypper >/dev/null 2>&1; then
-        echo "zypper"
-    elif command -v apk >/dev/null 2>&1; then
-        echo "apk"
+    # Check if we're on Arch Linux with pacman
+    if ! command -v pacman >/dev/null 2>&1; then
+        echo "non-arch"
+        return
+    fi
+    
+    # We have pacman, now detect available AUR helpers
+    if command -v yay >/dev/null 2>&1; then
+        echo "pacman-yay"
+    elif command -v paru >/dev/null 2>&1; then
+        echo "pacman-paru"
     else
-        echo "unknown"
+        echo "pacman"
     fi
 }
 
-# Get package installation command for detected package manager
+# Get appropriate installation command based on package type and available tools
 get_install_command() {
     local pkg_manager="$1"
-    shift
+    local package_type="$2"  # "official" or "aur"
+    shift 2
     local packages=("$@")
     
     case "$pkg_manager" in
+        pacman-yay)
+            if [[ "$package_type" == "aur" ]]; then
+                echo "yay -S ${packages[*]}"
+            else
+                echo "sudo pacman -S ${packages[*]}"
+            fi
+            ;;
+        pacman-paru)
+            if [[ "$package_type" == "aur" ]]; then
+                echo "paru -S ${packages[*]}"
+            else
+                echo "sudo pacman -S ${packages[*]}"
+            fi
+            ;;
         pacman)
-            echo "sudo pacman -S ${packages[*]}"
+            if [[ "$package_type" == "aur" ]]; then
+                echo "# AUR package requires manual installation:"
+                echo "# git clone https://aur.archlinux.org/${packages[0]}.git && cd ${packages[0]} && makepkg -si"
+            else
+                echo "sudo pacman -S ${packages[*]}"
+            fi
             ;;
-        apt)
-            echo "sudo apt install ${packages[*]}"
-            ;;
-        dnf)
-            echo "sudo dnf install ${packages[*]}"
-            ;;
-        yum)
-            echo "sudo yum install ${packages[*]}"
-            ;;
-        zypper)
-            echo "sudo zypper install ${packages[*]}"
-            ;;
-        apk)
-            echo "sudo apk add ${packages[*]}"
+        non-arch)
+            echo "# This tool is designed for Arch Linux only."
+            echo "# Please install HySS manually or use an Arch-based distribution."
             ;;
         *)
-            echo "# Package manager not detected - please install manually: ${packages[*]}"
+            echo "# Unable to detect package manager - please install manually: ${packages[*]}"
             ;;
     esac
 }
 
-# Map generic tool names to distribution-specific package names
-get_package_names() {
-    local pkg_manager="$1"
-    local tool="$2"
+# Map tool names to Arch Linux package names and determine package type
+get_package_info() {
+    local tool="$1"
     
     case "$tool" in
         grim)
-            echo "grim"
+            echo "official:grim"
             ;;
         slurp)
-            echo "slurp"
+            echo "official:slurp"
             ;;
         wl-copy)
-            case "$pkg_manager" in
-                pacman) echo "wl-clipboard" ;;
-                apt) echo "wl-clipboard" ;;
-                *) echo "wl-clipboard" ;;
-            esac
+            echo "official:wl-clipboard"
             ;;
         imagemagick)
-            echo "imagemagick"
+            echo "official:imagemagick"
             ;;
         tesseract)
-            case "$pkg_manager" in
-                pacman) echo "tesseract tesseract-data-eng" ;;
-                apt) echo "tesseract-ocr tesseract-ocr-eng" ;;
-                dnf|yum) echo "tesseract tesseract-langpack-eng" ;;
-                *) echo "tesseract tesseract-eng" ;;
-            esac
+            echo "official:tesseract tesseract-data-eng"
             ;;
         jq)
-            echo "jq"
+            echo "official:jq"
             ;;
         notify-send)
-            case "$pkg_manager" in
-                pacman) echo "libnotify" ;;
-                apt) echo "libnotify-bin" ;;
-                dnf|yum) echo "libnotify" ;;
-                *) echo "libnotify" ;;
-            esac
+            echo "official:libnotify"
             ;;
         satty)
-            echo "satty"
+            echo "aur:satty"
             ;;
         swappy)
-            echo "swappy"
+            echo "official:swappy"
             ;;
         *)
-            echo "$tool"
+            echo "official:$tool"
             ;;
     esac
+}
+
+# Extract package names from package info
+get_package_names() {
+    local package_info="$1"
+    echo "${package_info#*:}"
+}
+
+# Extract package type from package info  
+get_package_type() {
+    local package_info="$1"
+    echo "${package_info%%:*}"
 }
 
 # Check dependencies before installation
@@ -380,38 +385,78 @@ check_dependencies() {
         # Provide installation guidance
         local pkg_manager
         pkg_manager=$(detect_package_manager)
-        print_info "Installation guidance for your system ($pkg_manager):"
-        echo
         
-        # Generate package lists
-        local core_packages=()
-        for tool in grim slurp wl-copy imagemagick tesseract jq notify-send; do
-            if [[ " ${missing_tools[*]} " =~ " ${tool} " ]] || [[ " ${missing_tools[*]} " =~ " ${tool} " ]]; then
-                local packages
-                packages=$(get_package_names "$pkg_manager" "$tool")
-                core_packages+=($packages)
+        if [[ "$pkg_manager" == "non-arch" ]]; then
+            print_warning "This tool is designed for Arch Linux only."
+            echo "Please install HySS manually or use an Arch-based distribution."
+            echo
+        else
+            print_info "Installation guidance for Arch Linux ($pkg_manager):"
+            echo
+            
+            # Generate package lists by type
+            local official_packages=()
+            local aur_packages=()
+            
+            for tool in grim slurp wl-copy imagemagick tesseract jq notify-send; do
+                if [[ " ${missing_tools[*]} " =~ " ${tool} " ]]; then
+                    local package_info package_names package_type
+                    package_info=$(get_package_info "$tool")
+                    package_names=$(get_package_names "$package_info")
+                    package_type=$(get_package_type "$package_info")
+                    
+                    if [[ "$package_type" == "official" ]]; then
+                        official_packages+=($package_names)
+                    else
+                        aur_packages+=($package_names)
+                    fi
+                fi
+            done
+            
+            # Handle annotation tools separately
+            local annotation_official=()
+            local annotation_aur=()
+            if [[ " ${missing_tools[*]} " =~ " satty or swappy " ]]; then
+                local satty_info swappy_info
+                satty_info=$(get_package_info "satty")
+                swappy_info=$(get_package_info "swappy")
+                
+                if [[ "$(get_package_type "$satty_info")" == "official" ]]; then
+                    annotation_official+=($(get_package_names "$satty_info"))
+                else
+                    annotation_aur+=($(get_package_names "$satty_info"))
+                fi
+                
+                if [[ "$(get_package_type "$swappy_info")" == "official" ]]; then
+                    annotation_official+=($(get_package_names "$swappy_info"))
+                else
+                    annotation_aur+=($(get_package_names "$swappy_info"))
+                fi
             fi
-        done
-        
-        local annotation_packages=()
-        if [[ " ${missing_tools[*]} " =~ " satty or swappy " ]]; then
-            local satty_pkg swappy_pkg
-            satty_pkg=$(get_package_names "$pkg_manager" "satty")
-            swappy_pkg=$(get_package_names "$pkg_manager" "swappy") 
-            annotation_packages=($satty_pkg $swappy_pkg)
-        fi
-        
-        # Show installation commands
-        if [[ ${#core_packages[@]} -gt 0 ]]; then
-            echo "Core dependencies:"
-            echo "  $(get_install_command "$pkg_manager" "${core_packages[@]}")"
-            echo
-        fi
-        
-        if [[ ${#annotation_packages[@]} -gt 0 ]]; then
-            echo "Annotation tools (choose at least one):"
-            echo "  $(get_install_command "$pkg_manager" "${annotation_packages[@]}")"
-            echo
+            
+            # Show installation commands
+            if [[ ${#official_packages[@]} -gt 0 ]]; then
+                echo "Core dependencies (official repos):"
+                echo "  $(get_install_command "$pkg_manager" "official" "${official_packages[@]}")"
+                echo
+            fi
+            
+            if [[ ${#aur_packages[@]} -gt 0 ]]; then
+                echo "Core dependencies (AUR):"
+                echo "  $(get_install_command "$pkg_manager" "aur" "${aur_packages[@]}")"
+                echo
+            fi
+            
+            if [[ ${#annotation_official[@]} -gt 0 ]] || [[ ${#annotation_aur[@]} -gt 0 ]]; then
+                echo "Annotation tools (choose at least one):"
+                if [[ ${#annotation_official[@]} -gt 0 ]]; then
+                    echo "  $(get_install_command "$pkg_manager" "official" "${annotation_official[@]}")"
+                fi
+                if [[ ${#annotation_aur[@]} -gt 0 ]]; then
+                    echo "  $(get_install_command "$pkg_manager" "aur" "${annotation_aur[@]}")"
+                fi
+                echo
+            fi
         fi
         
         rm -rf "$temp_data_dir"
